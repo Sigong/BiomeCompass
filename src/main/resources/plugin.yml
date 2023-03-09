@@ -1,0 +1,9 @@
+name: BiomeCompass
+version: ${project.version}
+main: com.sigong.BiomeCompass.BiomeCompass
+api-version: 1.13
+depend: [ResourceWorld]
+commands:
+  createcompass:
+    description: 'Creates a biome compass.'
+    usage: '/createcompass <biome>'
