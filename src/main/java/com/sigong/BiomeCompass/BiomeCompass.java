@@ -4,6 +4,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import javax.naming.Name;
+
 public class BiomeCompass extends JavaPlugin {
 
     private static final String RESOURCE_WORLD_VERSION = "1.9.8";
@@ -16,7 +18,10 @@ public class BiomeCompass extends JavaPlugin {
         }
 
         // Create record of NamespacedKeys for use in other classes
-        NamespacedKeyHolder keyHolder = new NamespacedKeyHolder(new NamespacedKey(this, "target-biome"), null, null);
+        NamespacedKeyHolder keyHolder = new NamespacedKeyHolder(new NamespacedKey(this, "target-biome"),
+                                                                new NamespacedKey(this, "distance-at-last-search"),
+                                                                new NamespacedKey(this, "last-search-position-x"),
+                                                                new NamespacedKey(this, "last-search-position-z"));
 
         //register compass helper class if not static
         BiomeSearchManager searcher = new BiomeSearchManager(this, keyHolder);

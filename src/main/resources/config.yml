@@ -1,0 +1,16 @@
+# BiomeCompass Configuration
+
+# Version of the configuration file (do not change this)
+config-version: 1.0
+# Worlds in which all biome compasses work
+enabled-worlds:
+  - world
+  - world_nether
+  - world_the_end
+# Search radius (in chunks) for all worlds
+chunk-search-radius: 50
+# Unchecked Block Limit (max number of unchecked blocks allowed before another biome search is performed)
+#   (Unchecked blocks are blocks that have not been checked for the target biome, but are close enough to the player
+#   that they could have an instance of the target biome that is closer than the current compass target)
+#   Setting this higher will make searches happen less frequently, try it if you are experiencing a lot of lag.
+unchecked-block-limit: 0

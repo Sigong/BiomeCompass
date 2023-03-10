@@ -5,7 +5,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.RegionAccessor;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
@@ -64,13 +63,11 @@ public class BiomeSearchManager {
         //The location of the nearest biome of the desired type
         Location biomeLocation = null;
         if(compassEnabledForWorld(startLocation.getWorld())) {
-            //TODO: add a check involving the currentLocation and the targt location to see if a search is even needed (two checks, one for distance and one for angle?)
             biomeLocation = searchWorldForBiome(startLocation, targetBiome, CHUNK_SEARCH_RADIUS);
         }
 
         //If no biome was found (or search timed out), point to a location that will make the compass spin
         //TODO: figure out how to point to nonexistent world instead of the end
-        //TODO: change compass name or lore based on whether or not a biome was found
         if(biomeLocation == null) {
             biomeLocation = new Location(Bukkit.getWorld("world_the_end"), 0, 0, 0);
         }
@@ -79,11 +76,23 @@ public class BiomeSearchManager {
 
         compassMeta.setLodestone(biomeLocation);
 
+        // Store ordinal of target biome in PDC
         compassMeta.getPersistentDataContainer().set(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER, targetBiome.ordinal());
+
+        // Store distance to target biome in PDC (or 0.0 if biome not found in this world)
+        // Store angle to target biome in PCD (or 0 if biome not found in this world)
+        double distance = 0.0;
+        float angle = 0f;
+        if(startLocation.getWorld().equals(biomeLocation.getWorld())){
+            distance = startLocation.distance(biomeLocation);
+        }
+        compassMeta.getPersistentDataContainer().set(keyHolder.distanceAtLastSearchKey(), PersistentDataType.DOUBLE, distance); //TODO: distance can probably be removed, then calculated from X, Z if needed
+        compassMeta.getPersistentDataContainer().set(keyHolder.lastSearchLocationX(), PersistentDataType.INTEGER, startLocation.getBlockX());
+        compassMeta.getPersistentDataContainer().set(keyHolder.lastSearchLocationZ(), PersistentDataType.INTEGER, startLocation.getBlockZ());
 
         compassMeta.setDisplayName(ChatColor.RESET + "Biome Compass: " + WordUtils.capitalize(targetBiome.toString().toLowerCase(Locale.ROOT).replace('_', ' ')));
 
-        //TODO: set compass lore to keep track of what world it is for, or what worlds it works in, or something else
+        //TODO: set compass lore to keep track of what world it is for, or what worlds it works in, or something else (if biome was found?)
 
         return compassMeta;
     }
@@ -95,10 +104,12 @@ public class BiomeSearchManager {
         Biome biome = Biome.values()[currentMeta.getPersistentDataContainer().get(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER)];
 
         //TODO: add a check involving the currentLocation and the targt location to see if a search is even needed (two checks, one for distance and one for angle?)
-        if(true){
-            return createCompassMeta(currentLocation, biome);
-        }else{
+        // If progress is being made and the angle is similar enough to the previous angle, no search needs to be performed.
+        if(currentLocation.distance(currentMeta.getLodestone()) < currentMeta.getPersistentDataContainer().get(keyHolder.distanceAtLastSearchKey(), PersistentDataType.DOUBLE)){
+            // TODO: use the formula to check for how many new blocks have been exposed, then perform a search if it exceeds the threshhold
             return currentMeta;
+        }else{
+            return createCompassMeta(currentLocation, biome);
         }
     }
 
@@ -243,10 +254,5 @@ public class BiomeSearchManager {
     // Checks if the biome at a given X,Z position matches the target biome
     private static boolean biomeMatchesTarget(World world, int X, int Z, Biome targetBiome){
         return ((RegionAccessor) world).getBiome(X*16, 255, Z*16) == targetBiome;
-    }
-    
-    @Nullable
-    private static Location checkChunk(World world, int chunkX, int chunkZ){
-        return null;
     }
 }

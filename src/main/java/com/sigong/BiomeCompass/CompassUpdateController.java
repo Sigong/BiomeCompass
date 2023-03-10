@@ -69,8 +69,6 @@ public class CompassUpdateController implements Listener {
 
             player.sendMessage("UPDATED OFFHAND COMPASS META ON WORLD CHANGE EVENT");
         }
-
-        //update the compass
     }
 
     // Returns true if a given item is a BiomeCompass
