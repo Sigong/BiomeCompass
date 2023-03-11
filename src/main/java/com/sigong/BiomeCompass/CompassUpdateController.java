@@ -1,90 +1,63 @@
 package com.sigong.BiomeCompass;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class CompassUpdateController implements Listener {
-    public CompassUpdateController(BiomeCompass instance, BiomeSearchManager searcher, NamespacedKeyHolder keyHolder) {
+    public CompassUpdateController(BiomeCompass instance, BiomeSearchManager searcher, NamespacedKeyHolder keyHolder, ConfigValues configValues) {
         this.instance = instance;
         this.searcher = searcher;
         this.keyHolder = keyHolder;
+        this.configValues = configValues;
     }
 
     private final BiomeCompass instance;
     private final BiomeSearchManager searcher;
     private final NamespacedKeyHolder keyHolder;
+    private final ConfigValues configValues;
 
-    //TODO: A queue for biome searches (not necessarily in this class) might help limit the amount of lag caused by searching (have a delay between each search)
+    //TODO: Eventhandler for when the world is loaded (might not be necessary without a BiomeMap)
 
-    //TODO: Eventhandler for when the world is reset (might not be necessary without a BiomeMap)
+    //TODO: When the plugin is reloaded, players lose their repeating tasks
+    //TODO: Existing tasks also won't have their interval updated when the config values are reloaded
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event){
+        (new CompassUpdateTask(event.getPlayer())).runTaskTimer(instance, 0L, 20L * configValues.automaticUpdateInterval());
+    }
 
-    //TODO: EventHandler for when a player moves between worlds (compass should be updated)
+    // Updates any compasses in the hotbar and offhand when a player moves between worlds.
     @EventHandler
     public void onPlayerChangeWorld(PlayerChangedWorldEvent event){
-        event.getPlayer().sendMessage("You are currently in " + event.getPlayer().getWorld().getName());
-        event.getPlayer().sendMessage("You were previously in " + event.getFrom().getName());
-
         //Check if player has a compass in the hotbar or offhand
-        Player player = event.getPlayer();
-        ItemStack item;
-
-        //Check each item in hotbar
-        for(int i = 0; i < 9; i++){
-            item = player.getInventory().getItem(i);
-            Bukkit.getLogger().info("testing item "+ i);
-            if(isBiomeCompass(item)){
-                CompassMeta compassMeta = (CompassMeta) item.getItemMeta();
-                //Location currentTarget = compassMeta.getLodestone(); //Todo: re-add this after you figure out how to use it
-                int ordinal = compassMeta.getPersistentDataContainer().get(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER);
-                Biome targetBiome = Biome.values()[ordinal];
-
-                CompassMeta newMeta = searcher.updateCompassMeta(compassMeta, event.getPlayer().getLocation());
-
-                player.getInventory().getItem(i).setItemMeta(newMeta);
-
-                player.sendMessage("UPDATED HOTBAR COMPASS META ON WORLD CHANGE EVENT");
-            }
-        }
-
-        //Check offhand
-        if(isBiomeCompass(player.getInventory().getItemInOffHand())){
-            CompassMeta compassMeta = (CompassMeta) player.getInventory().getItemInOffHand().getItemMeta();
-
-            int ordinal = player.getInventory().getItemInOffHand().getItemMeta().getPersistentDataContainer().get(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER);
-            Biome targetBiome = Biome.values()[ordinal];
-
-            CompassMeta newMeta = searcher.updateCompassMeta(compassMeta, event.getPlayer().getLocation());
-
-            player.getInventory().getItemInOffHand().setItemMeta(newMeta);
-
-            player.sendMessage("UPDATED OFFHAND COMPASS META ON WORLD CHANGE EVENT");
-        }
+        updateHotbarOffhandCompasses(event.getPlayer(), CompassUpdateReason.AUTOMATIC);
     }
 
     // Returns true if a given item is a BiomeCompass
     private boolean isBiomeCompass(ItemStack item){
         if(item == null){
-            Bukkit.getLogger().info("Item is null");
+            //Bukkit.getLogger().info("Item is null");
             return false;
         }
 
         if(item.getType() != Material.COMPASS){
-            Bukkit.getLogger().info("Item is not compass");
+            //Bukkit.getLogger().info("Item is not compass");
             return false;
         }
 
         if(!item.hasItemMeta()){
-            Bukkit.getLogger().info("Compass has no meta");
+            //Bukkit.getLogger().info("Compass has no meta");
             return false;
         }
 
@@ -95,13 +68,64 @@ public class CompassUpdateController implements Listener {
             return false;
         }
 
-        //TODO: add checks for other keys if necessary
+        //Add checks for other keys if necessary
 
         return true;
     }
 
-    //TODO: EventHandler for when a player updates the compass (right click, currently)
+    // If the player right clicks while holding a biome compass, update it.
+    @EventHandler
+    public void onCompassRightClick(PlayerInteractEvent event){
+        if(event.getAction() == Action.RIGHT_CLICK_AIR || (event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getHand() == EquipmentSlot.HAND )){
+            Player player = event.getPlayer();
+            ItemStack item = player.getInventory().getItemInMainHand();
+            if(isBiomeCompass(item)){
+                CompassMeta newMeta = searcher.updateCompassMeta((CompassMeta) item.getItemMeta(), player, CompassUpdateReason.MANUAL);
+                item.setItemMeta(newMeta);
+            }
+        }
+    }
 
-    //TODO: Repeating task that checks each player and updates any hotbar of offhand compasses periodically
+    // Checks hotbar and offhand of a given for BiomeCompasses, and updates each
+    public void updateHotbarOffhandCompasses(Player player, CompassUpdateReason reason){
+        ItemStack item;
+
+        //Check each item in hotbar
+        for(int i = 0; i < 9; i++){
+            item = player.getInventory().getItem(i);
+            if(isBiomeCompass(item)){
+                CompassMeta compassMeta = (CompassMeta) item.getItemMeta();
+                CompassMeta newMeta = searcher.updateCompassMeta(compassMeta, player, reason);
+                item.setItemMeta(newMeta);
+            }
+        }
+
+        //Check offhand
+        if(isBiomeCompass(player.getInventory().getItemInOffHand())){
+            CompassMeta compassMeta = (CompassMeta) player.getInventory().getItemInOffHand().getItemMeta();
+            CompassMeta newMeta = searcher.updateCompassMeta(compassMeta, player, reason);
+            player.getInventory().getItemInOffHand().setItemMeta(newMeta);
+        }
+    }
+
+    //Repeating task that checks each player and updates any hotbar of offhand compasses periodically
+    private class CompassUpdateTask extends BukkitRunnable {
+        public CompassUpdateTask(Player player){
+            this.player = player;
+        }
+
+        private final Player player;
+
+        @Override
+        public void run() {
+            if(player.isOnline()){
+                // Update the player's compasses if they are online.
+                updateHotbarOffhandCompasses(player, CompassUpdateReason.AUTOMATIC);
+            }else{
+                // Cancel the task if the player is offline.
+                this.cancel();
+            }
+        }
+    }
 
 }

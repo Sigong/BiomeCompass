@@ -1,16 +1,38 @@
 # BiomeCompass Configuration
 
 # Version of the configuration file (do not change this)
-config-version: 1.0
+config-version: 1
+
 # Worlds in which all biome compasses work
 enabled-worlds:
   - world
   - world_nether
   - world_the_end
+
 # Search radius (in chunks) for all worlds
 chunk-search-radius: 50
+
 # Unchecked Block Limit (max number of unchecked blocks allowed before another biome search is performed)
 #   (Unchecked blocks are blocks that have not been checked for the target biome, but are close enough to the player
 #   that they could have an instance of the target biome that is closer than the current compass target)
 #   Setting this higher will make searches happen less frequently, try it if you are experiencing a lot of lag.
-unchecked-block-limit: 0
+unchecked-chunk-limit: 0
+
+# Should players be able to manually update a biome compass by right-clicking while holding it
+manual-update-enabled: true
+# How often can a player manually update a compass (in seconds)? (Used to prevent update spamming)
+manual-update-interval: 10
+# Should manually updating the compass consume an item?
+manual-update-consumes-item: false
+# If so, what item and how many (use material enum: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html )
+manual-update-fuel: REDSTONE
+manual-update-fuel-amount: 1
+
+# Should the compass update automatically? If so, how many seconds between updates?
+automatic-update-enabled: true
+automatic-update-interval: 180
+# Should automatically updating the compass consume an item?
+automatic-update-consumes-item: false
+# If so, what item and how many (use material enum: https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Material.html )
+automatic-update-fuel: REDSTONE
+automatic-update-fuel-amount: 1

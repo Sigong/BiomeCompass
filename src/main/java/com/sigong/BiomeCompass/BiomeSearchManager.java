@@ -8,38 +8,19 @@ import org.bukkit.Material;
 import org.bukkit.RegionAccessor;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
-import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.Plugin;
 
 import javax.annotation.Nullable;
 import java.util.Locale;
 
 public class BiomeSearchManager {
-    public BiomeSearchManager(BiomeCompass instance, NamespacedKeyHolder keyHolder){
+    public BiomeSearchManager(BiomeCompass instance, NamespacedKeyHolder keyHolder, ConfigValues configValues){
         this.instance = instance;
         this.keyHolder = keyHolder;
-
-        //Load information from ResourceWorld's config file
-        Plugin resourceWorld = Bukkit.getServer().getPluginManager().getPlugin("ResourceWorld");
-        FileConfiguration resourceWorldConfig = resourceWorld.getConfig();
-
-        //resource_world
-        resourceWorldEnabled = resourceWorldConfig.getBoolean("world.enabled");
-        resourceWorldName = resourceWorldConfig.getString("world.world_name");
-        resourceWorldSize = resourceWorldConfig.getInt("world.world_border.size");
-
-        //resource_nether
-        resourceNetherEnabled = resourceWorldConfig.getBoolean("nether.enabled");
-        resourceNetherName = resourceWorldConfig.getString("nether.world_name");
-        resourceNetherSize = resourceWorldConfig.getInt("nether.world_border.size");
-
-        //resource_end
-        resourceEndEnabled = resourceWorldConfig.getBoolean("end.enabled");
-        resourceEndName = resourceWorldConfig.getString("end.world_name");
-        resourceEndSize = resourceWorldConfig.getInt("end.world_border.size");
+        this.configValues = configValues;
     }
 
     // Plugin main class instance
@@ -48,13 +29,8 @@ public class BiomeSearchManager {
     // NamespacedKey Holder
     private final NamespacedKeyHolder keyHolder;
 
-    // The maximum distance in chunks from the player that will be searched for the biome
-    private final int CHUNK_SEARCH_RADIUS = 50;
-    
-    // Information from ResourceWorld config file
-    private final boolean resourceWorldEnabled, resourceNetherEnabled, resourceEndEnabled;
-    private final String resourceWorldName, resourceNetherName, resourceEndName;
-    private final int resourceWorldSize, resourceNetherSize, resourceEndSize;
+    // Holder for values retrieved from the plugin's config file
+    private final ConfigValues configValues;
 
     // Creates a CompassMeta for a biome compass that points to the nearest biome of the desired type
     public CompassMeta createCompassMeta(Location startLocation, Biome targetBiome){
@@ -63,7 +39,7 @@ public class BiomeSearchManager {
         //The location of the nearest biome of the desired type
         Location biomeLocation = null;
         if(compassEnabledForWorld(startLocation.getWorld())) {
-            biomeLocation = searchWorldForBiome(startLocation, targetBiome, CHUNK_SEARCH_RADIUS);
+            biomeLocation = searchWorldForBiome(startLocation, targetBiome, configValues.chunkSearchRadius());
         }
 
         //If no biome was found (or search timed out), point to a location that will make the compass spin
@@ -80,13 +56,10 @@ public class BiomeSearchManager {
         compassMeta.getPersistentDataContainer().set(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER, targetBiome.ordinal());
 
         // Store distance to target biome in PDC (or 0.0 if biome not found in this world)
-        // Store angle to target biome in PCD (or 0 if biome not found in this world)
         double distance = 0.0;
-        float angle = 0f;
         if(startLocation.getWorld().equals(biomeLocation.getWorld())){
             distance = startLocation.distance(biomeLocation);
         }
-        compassMeta.getPersistentDataContainer().set(keyHolder.distanceAtLastSearchKey(), PersistentDataType.DOUBLE, distance); //TODO: distance can probably be removed, then calculated from X, Z if needed
         compassMeta.getPersistentDataContainer().set(keyHolder.lastSearchLocationX(), PersistentDataType.INTEGER, startLocation.getBlockX());
         compassMeta.getPersistentDataContainer().set(keyHolder.lastSearchLocationZ(), PersistentDataType.INTEGER, startLocation.getBlockZ());
 
@@ -98,28 +71,46 @@ public class BiomeSearchManager {
     }
 
     // Updates the target location of a biomecompass only if it needs to be updated
-    //TODO: figure out how to detect this, maybe compare previous and current angles between player and target
-    //TODO: the distance to the target as of the last search could be stored in the CompassMeta, and definitely search if it is greater now (update the distance though)
-    public CompassMeta updateCompassMeta(CompassMeta currentMeta, Location currentLocation) {
+    // The compass needs to be updated only if there is a high enough number of unchecked chunks (as defined in config)
+    // Unchecked chunks are chunks that haven't been searched, but are closer to the player than the compass target
+    public CompassMeta updateCompassMeta(CompassMeta currentMeta, Player player, CompassUpdateReason reason) {
+        Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "UPDATING COMPASS: " + ChatColor.RESET + reason.toString());
+
+        if(!compassEnabledForWorld(player.getWorld())){
+            if(reason == CompassUpdateReason.MANUAL){
+                player.sendMessage(ChatColor.RED + "BiomeCompass is not enabled in this world.");
+            }
+            return currentMeta;
+        }
+
+        if(reason == CompassUpdateReason.MANUAL){
+            if(false){ //TODO: figure out condition to check if the player updated it too recently to update again
+                // TODO: Message about too soon to manually update again
+                return currentMeta;
+            }
+            if(configValues.manualUpdateConsumesItem()){
+                //TODO: consume item or return existing meta if not enough item to consume
+            }
+        }else if(reason == CompassUpdateReason.AUTOMATIC && configValues.automaticUpdateConsumesItem()){
+            //TODO: consume item or return existing meta if not enough item to consume
+        }
+
         Biome biome = Biome.values()[currentMeta.getPersistentDataContainer().get(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER)];
 
-        //TODO: add a check involving the currentLocation and the targt location to see if a search is even needed (two checks, one for distance and one for angle?)
-        // If progress is being made and the angle is similar enough to the previous angle, no search needs to be performed.
-        if(currentLocation.distance(currentMeta.getLodestone()) < currentMeta.getPersistentDataContainer().get(keyHolder.distanceAtLastSearchKey(), PersistentDataType.DOUBLE)){
-            // TODO: use the formula to check for how many new blocks have been exposed, then perform a search if it exceeds the threshhold
-            return currentMeta;
+        int uncheckedChunks = 0; // TODO: use the formula to check for how many new blocks have been exposed, then perform a search if it exceeds the threshhold
+
+        if(uncheckedChunks >= configValues.uncheckedChunkLimit()){
+            Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "UNCHECKED CHUNKS WERE HIGH ENOUGH");
+            return createCompassMeta(player.getLocation(), biome);
         }else{
-            return createCompassMeta(currentLocation, biome);
+            Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "UNCHECKED CHUNKS WERE NOT HIGH ENOUGH");
+            return currentMeta;
         }
     }
 
     // Returns true if the compass is enabled in the given world
     private boolean compassEnabledForWorld(World world){
-        String worldName = world.getName();
-        if((resourceWorldEnabled && worldName.equals(resourceWorldName)) || ((resourceNetherEnabled && worldName.equals(resourceNetherName))) || ((resourceEndEnabled && worldName.equals(resourceEndName)))) {
-            return true;
-        }
-        return false;
+        return configValues.enabledWorldNames().contains(world.getName());
     }
 
     //Search the world for the target biome starting at a given location
@@ -136,10 +127,12 @@ public class BiomeSearchManager {
         //If the starting coordinates are inside the matrix
         if(checkCoordinatesWithinBorder(chunkX, chunkZ, worldSizeInChunks)){
             int count = 0;
-            double maxCount = worldSizeInChunks*worldSizeInChunks;
             
             // The radius of chunks that are currently being searched
             int radius = 1;
+
+            //TIMING INFORMATION
+            long startTime = System.currentTimeMillis();
 
             //Check the starting Chunk
             int testX = chunkX;
@@ -148,13 +141,12 @@ public class BiomeSearchManager {
             //If test coordinates are in range and the biome matches
             if(checkCoordinatesWithinBorder(testX, testZ, worldSizeInChunks)){
                 if(biomeMatchesTarget(world, testX, testZ, biome)) {
+                    long endTime = System.currentTimeMillis();
+                    Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
                     return new Location(world, testX * 16, 255, testZ * 16);
                 }
                 count = count + 1;
             }
-
-            //TIMING INFORMATION
-            long startTime = System.currentTimeMillis();
 
             while(radius <= searchRadiusInChunks){
                 // 1. Step in the next step of the spiral
@@ -229,26 +221,20 @@ public class BiomeSearchManager {
                 }
 
                 long endTime = System.currentTimeMillis();
-                Bukkit.getLogger().info("Searched " + count + " total chunks (radius " + radius + ") for " + biome.toString() + ". It took " + (endTime - startTime) + " milliseconds.");
+                //Bukkit.getLogger().info("Searched " + count + " total chunks (radius " + radius + ") for " + biome.toString() + ". It took " + (endTime - startTime) + " milliseconds.");
 
                 radius = radius + 1;
             }
 
             //If it doesn't return in the loop, no biome was found, so return null
             Bukkit.getLogger().info("Biome " + biome.toString() + " was not found.");
-            return null;
-        }else{
-            //Starting location was outside the map (this should never happen)
-            return null;
         }
+        return null; //Starting location was outside world border, or no biome was found
     }
 
     // Checks if a given X,Z position is within a radius of the origin
     private static boolean checkCoordinatesWithinBorder(int X, int Z, double worldDiameter){
-        //is the X,Z coordinate inside of the world border
-        boolean insideWorldBorder = ((X >= (-worldDiameter/2) && X < (worldDiameter/2)) && (Z >= (-worldDiameter/2) && Z < (worldDiameter/2)));
-
-        return insideWorldBorder;
+        return ((X >= (-worldDiameter/2) && X < (worldDiameter/2)) && (Z >= (-worldDiameter/2) && Z < (worldDiameter/2)));
     }
     
     // Checks if the biome at a given X,Z position matches the target biome
@@ -256,3 +242,4 @@ public class BiomeSearchManager {
         return ((RegionAccessor) world).getBiome(X*16, 255, Z*16) == targetBiome;
     }
 }
+
