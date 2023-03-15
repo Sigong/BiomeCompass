@@ -60,7 +60,7 @@ public class CompassUpdateController implements Listener {
         CompassMeta meta = (CompassMeta) item.getItemMeta();
 
         if(!meta.getPersistentDataContainer().has(BiomeCompass.TARGET_BIOME_KEY, PersistentDataType.INTEGER)){
-            Bukkit.getLogger().info("CompassMeta does not have the right key");
+            //Bukkit.getLogger().info("CompassMeta does not have the right key");
             return false;
         }
 

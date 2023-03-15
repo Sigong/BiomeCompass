@@ -78,7 +78,7 @@ public class BiomeSearchManager {
     // The compass needs to be updated only if there is a high enough number of unchecked chunks (as defined in config)
     // Unchecked chunks are chunks that haven't been searched, but are closer to the player than the compass target
     public CompassMeta updateCompassMeta(CompassMeta currentMeta, Player player, CompassUpdateReason reason) {
-        Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "UPDATING COMPASS: " + ChatColor.RESET + reason.toString());
+        //Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "UPDATING COMPASS: " + ChatColor.RESET + reason.toString());
 
         // If the manual is disabled and this is a manual update, or automatic disabled an automatic update
         if((reason == CompassUpdateReason.MANUAL && !configValues.isManualUpdateEnabled()) || (reason == CompassUpdateReason.AUTOMATIC && !configValues.isAutomaticUpdateEnabled())){
@@ -119,15 +119,15 @@ public class BiomeSearchManager {
         // There aren't enough unchecked chunks to merit a compass update
         int uncheckedChunks = calculateUncheckedChunks(currentMeta, player.getLocation());
 
-        Bukkit.getConsoleSender().sendMessage(ChatColor.LIGHT_PURPLE + "Unchecked Chunks: " + uncheckedChunks);
+        //Bukkit.getConsoleSender().sendMessage(ChatColor.LIGHT_PURPLE + "Unchecked Chunks: " + uncheckedChunks);
 
         if(uncheckedChunks < configValues.getUncheckedChunkLimit()){
-            Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "UNCHECKED CHUNKS WERE NOT HIGH ENOUGH");
+            //Bukkit.getConsoleSender().sendMessage(ChatColor.RED + "UNCHECKED CHUNKS WERE NOT HIGH ENOUGH");
             return currentMeta;
         }
 
         // Update the compass by performing a biome search, update lastManualUpdate if this update was manual
-        Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "UNCHECKED CHUNKS WERE HIGH ENOUGH");
+        //Bukkit.getConsoleSender().sendMessage(ChatColor.GREEN + "UNCHECKED CHUNKS WERE HIGH ENOUGH");
 
         if(reason == CompassUpdateReason.MANUAL){lastManualUpdate.put(player.getUniqueId(), System.currentTimeMillis());}
 
@@ -223,7 +223,7 @@ public class BiomeSearchManager {
                 count = count + 1;
                 if(biomeMatchesTarget(world, testX, testZ, biome)) {
                     long endTime = System.currentTimeMillis();
-                    Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
+                    //Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
                     return new Location(world, testX * 16, 255, testZ * 16);
                 }
             }
@@ -242,13 +242,13 @@ public class BiomeSearchManager {
                     // -X -Z for start direction, +Z for progression
                     testX = chunkX - radius;
                     testZ = chunkZ - radius + i;
-                    //Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
+                    ////Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
                     //If test coordinates are in range and the biome matches
                     if(checkCoordinatesWithinBorder(testX, testZ, worldSizeInChunks)){
                         count = count + 1;
                         if(biomeMatchesTarget(world, testX, testZ, biome)) {
                             long endTime = System.currentTimeMillis();
-                            Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
+                            //Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
                             return new Location(world, testX * 16, 255, testZ * 16);
                         }
                     }
@@ -257,13 +257,13 @@ public class BiomeSearchManager {
                     // -X +Z for start direction, +X for progression
                     testX = chunkX - radius + i;
                     testZ = chunkZ + radius;
-                    //Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
+                    ////Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
                     //If test coordinates are in range and the biome matches
                     if(checkCoordinatesWithinBorder(testX, testZ, worldSizeInChunks)){
                         count = count + 1;
                         if(biomeMatchesTarget(world, testX, testZ, biome)) {
                             long endTime = System.currentTimeMillis();
-                            Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
+                            //Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
                             return new Location(world, testX * 16, 255, testZ * 16);
                         }
                     }
@@ -272,13 +272,13 @@ public class BiomeSearchManager {
                     // +X +Z for start direction, -Z for progression
                     testX = chunkX + radius;
                     testZ = chunkZ + radius - i;
-                    //Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
+                    ////Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
                     //If test coordinates are in range and the biome matches
                     if(checkCoordinatesWithinBorder(testX, testZ, worldSizeInChunks)){
                         count = count + 1;
                         if(biomeMatchesTarget(world, testX, testZ, biome)) {
                             long endTime = System.currentTimeMillis();
-                            Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
+                            //Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
                             return new Location(world, testX * 16, 255, testZ * 16);
                         }
                     }
@@ -288,27 +288,27 @@ public class BiomeSearchManager {
                     // +X -Z for start direction, -X for progression
                     testX = chunkX + radius - i;
                     testZ = chunkZ - radius;
-                    //Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
+                    ////Bukkit.getLogger().info("Tested Chunk (" + testX + ", " + testZ + ")");
                     //If test coordinates are in range and the biome matches
                     if(checkCoordinatesWithinBorder(testX, testZ, worldSizeInChunks)){
                         count = count + 1;
                         if(biomeMatchesTarget(world, testX, testZ, biome)) {
                             long endTime = System.currentTimeMillis();
-                            Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
+                            //Bukkit.getLogger().info("Located " + biome.toString() + " after searching " + count + " chunks. It took " + (endTime - startTime) + " milliseconds.");
                             return new Location(world, testX * 16, 255, testZ * 16);
                         }
                     }
                 }
 
                 long endTime = System.currentTimeMillis();
-                //Bukkit.getLogger().info("Searched " + count + " total chunks (radius " + radius + ") for " + biome.toString() + ". It took " + (endTime - startTime) + " milliseconds.");
+                ////Bukkit.getLogger().info("Searched " + count + " total chunks (radius " + radius + ") for " + biome.toString() + ". It took " + (endTime - startTime) + " milliseconds.");
 
                 radius = radius + 1;
             }
 
             //If it doesn't return in the loop, no biome was found, so return null
             long endTime = System.currentTimeMillis();
-            Bukkit.getLogger().info("Biome " + biome.toString() + " was not found within " + searchRadiusInChunks + " chunks. (searched " + count + " chunks in " + (endTime - startTime) + " milliseconds)");
+            //Bukkit.getLogger().info("Biome " + biome.toString() + " was not found within " + searchRadiusInChunks + " chunks. (searched " + count + " chunks in " + (endTime - startTime) + " milliseconds)");
         }
         return null; //Starting location was outside world border, or no biome was found
     }
