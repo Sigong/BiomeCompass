@@ -16,25 +16,21 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class CompassUpdateController implements Listener {
-    public CompassUpdateController(BiomeCompass instance, BiomeSearchManager searcher, NamespacedKeyHolder keyHolder, ConfigValues configValues) {
+    public CompassUpdateController(BiomeCompass instance, BiomeSearchManager searcher, ConfigValues configValues) {
         this.instance = instance;
         this.searcher = searcher;
-        this.keyHolder = keyHolder;
         this.configValues = configValues;
     }
 
     private final BiomeCompass instance;
     private final BiomeSearchManager searcher;
-    private final NamespacedKeyHolder keyHolder;
     private final ConfigValues configValues;
-
-    //TODO: Eventhandler for when the world is loaded (might not be necessary without a BiomeMap)
 
     //TODO: When the plugin is reloaded, players lose their repeating tasks
     //TODO: Existing tasks also won't have their interval updated when the config values are reloaded
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event){
-        (new CompassUpdateTask(event.getPlayer())).runTaskTimer(instance, 0L, 20L * configValues.automaticUpdateInterval());
+        (new CompassUpdateTask(event.getPlayer())).runTaskTimer(instance, 0L, 20L * configValues.getAutomaticUpdateInterval());
     }
 
     // Updates any compasses in the hotbar and offhand when a player moves between worlds.
@@ -63,7 +59,7 @@ public class CompassUpdateController implements Listener {
 
         CompassMeta meta = (CompassMeta) item.getItemMeta();
 
-        if(!meta.getPersistentDataContainer().has(keyHolder.targetBiomeKey(), PersistentDataType.INTEGER)){
+        if(!meta.getPersistentDataContainer().has(BiomeCompass.TARGET_BIOME_KEY, PersistentDataType.INTEGER)){
             Bukkit.getLogger().info("CompassMeta does not have the right key");
             return false;
         }

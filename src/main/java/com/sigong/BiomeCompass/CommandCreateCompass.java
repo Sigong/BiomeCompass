@@ -19,18 +19,15 @@ import java.util.List;
 
 public class CommandCreateCompass implements CommandExecutor {
 
-    public CommandCreateCompass(BiomeCompass instance, BiomeSearchManager searcher, NamespacedKeyHolder keyHolder){
+    public CommandCreateCompass(BiomeCompass instance, BiomeSearchManager searcher){
         this.instance = instance;
-        instance.getCommand("createcompass").setTabCompleter(new CreateCompassTabCompleter());
-
         this.searcher = searcher;
 
-        this.keyHolder = keyHolder;
+        instance.getCommand("createcompass").setTabCompleter(new CreateCompassTabCompleter());
     }
 
     private final BiomeCompass instance;
     private final BiomeSearchManager searcher;
-    private final NamespacedKeyHolder keyHolder;
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String alias, String[] args) {
@@ -86,10 +83,14 @@ public class CommandCreateCompass implements CommandExecutor {
             for(Biome biome : Biome.values()){
                 biomeNames.add(biome.toString());
             }
+
+            //TODO: fix this, something in it doesn't work
+//            String[] names = new String[Biome.values().length];
+//            Arrays.setAll(names, k -> {return Biome.values()[k].toString();});
+//            biomeNames = (ArrayList<String>) Arrays.asList(names);
         }
 
         private final ArrayList<String> biomeNames;
-        //private final ArrayList<String> worldNames;
 
         @Override
         public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {

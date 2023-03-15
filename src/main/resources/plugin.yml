@@ -5,7 +5,17 @@ api-version: 1.13
 commands:
   createcompass:
     description: 'Creates a biome compass. You may optionally specify a player to receive the compass.'
-    usage: "/<command> <biome> [player]"
+    usage: "/createcompass <biome> [player]"
+    permission: biomecompass.createcompass
   biomecompass:
     description: "Main plugin command. Currently only used to reload the plugin's copy of config files."
-    usage: "/<command> reload"
+    usage: "/biomecompass reload"
+    permission: biomecompass.biomecompass
+
+permissions:
+  biomecompass.biomecompass:
+    description: Allows use of BiomeCompass's main command.
+    default: op
+  biomecompass.createcompass:
+    description: Allows the creation of BiomeCompasses.
+    default: op
